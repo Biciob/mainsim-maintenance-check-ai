@@ -1,0 +1,5 @@
+{
+  "name": "Maintenance Maturity Assessor",
+  "description": "Uno strumento professionale per valutare il livello di maturità manutentiva (CMMS Readiness) e generare report con analisi AI e grafici radar.",
+  "requestFramePermissions": []
+}
