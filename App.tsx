@@ -164,7 +164,7 @@ function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-8 print:hidden">
         <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 text-sm">
-            @2025 mainsim - MaintenanceCheckAI. Designed for Maintenance Professionals
+            ©2025 mainsim - what maintenance can be | Designed with ❤️ for Maintenance Professionals
         </div>
       </footer>
     </div>

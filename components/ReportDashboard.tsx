@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AssessmentResult } from '../types';
 import {
   Radar,
@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
-import { Download, CheckCircle, AlertTriangle, Lightbulb, BarChart3 } from 'lucide-react';
+import { Download, CheckCircle, AlertTriangle, Lightbulb, BarChart3, Loader2 } from 'lucide-react';
 
 interface ReportDashboardProps {
   result: AssessmentResult;
@@ -17,6 +17,8 @@ interface ReportDashboardProps {
 }
 
 const ReportDashboard: React.FC<ReportDashboardProps> = ({ result, onReset }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // Transform key-value object to array for Recharts
   const chartData = Object.entries(result.radarData).map(([subject, A]) => ({
     subject,
@@ -30,10 +32,44 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ result, onReset }) =>
     return 'text-red-600 bg-red-50 print:text-red-700 print:bg-transparent';
   };
 
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    // Allow React to render the visibility changes (show header, hide buttons)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const element = document.getElementById('report-container');
+    
+    // Configuration for html2pdf
+    const opt = {
+      margin: 10,
+      filename: `Mainsim_CMMS_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    try {
+        // @ts-ignore
+        if (window.html2pdf) {
+            // @ts-ignore
+            await window.html2pdf().set(opt).from(element).save();
+        } else {
+            console.warn("html2pdf library not found, falling back to window.print()");
+            window.print();
+        }
+    } catch (e) {
+        console.error("Download failed", e);
+        window.print();
+    } finally {
+        setIsDownloading(false);
+    }
+  };
+
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 pb-20 print:pb-0 print:space-y-6">
+    <div id="report-container" className="w-full max-w-5xl mx-auto space-y-8 pb-20 print:pb-0 print:space-y-6">
       
-      {/* CSS For Print Layout */}
+      {/* CSS For Print Layout Fallback */}
       <style>{`
         @media print {
           @page {
@@ -51,6 +87,9 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ result, onReset }) =>
           .print\\:block {
             display: block !important;
           }
+          .print\\:flex {
+            display: flex !important;
+          }
           .print\\:text-black {
             color: black !important;
           }
@@ -64,8 +103,8 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ result, onReset }) =>
         }
       `}</style>
 
-      {/* Print-only Header */}
-      <div className="hidden print:flex items-center gap-3 border-b border-slate-200 pb-4 mb-8">
+      {/* Brand Header: Visible during Print AND during PDF Download */}
+      <div className={`${isDownloading ? 'flex' : 'hidden'} print:flex items-center gap-3 border-b border-slate-200 pb-4 mb-8`}>
          <div className="bg-indigo-600 p-2 rounded-lg">
             <BarChart3 className="h-6 w-6 text-white" />
          </div>
@@ -75,19 +114,21 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ result, onReset }) =>
          </div>
       </div>
 
-      {/* Screen Header Section */}
-      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6 print:shadow-none print:border-none print:p-0">
+      {/* Screen Header Section with Actions */}
+      <div className={`bg-white rounded-2xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6 print:shadow-none print:border-none print:p-0 ${isDownloading ? 'border-none shadow-none p-0' : ''}`}>
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">CMMS Readiness Report</h1>
           <p className="text-slate-500">Analisi generata dall'Intelligenza Artificiale sulla base delle tue risposte.</p>
         </div>
-        <div className="flex gap-3 print:hidden">
+        {/* Actions are hidden during download/print */}
+        <div className={`${isDownloading ? 'hidden' : 'flex'} gap-3 print:hidden`}>
             <button 
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors disabled:opacity-50"
             >
-                <Download className="w-4 h-4" />
-                <span>Salva PDF</span>
+                {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                <span>{isDownloading ? 'Generazione...' : 'Salva PDF'}</span>
             </button>
         </div>
       </div>
@@ -186,7 +227,8 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ result, onReset }) =>
                     ))}
                 </ul>
             </div>
-            <div className="flex flex-col justify-center items-center bg-white/10 rounded-xl p-8 backdrop-blur-sm border border-white/20 text-center print:hidden">
+            {/* Hidden only during Print/Download, visible on screen */}
+            <div className={`${isDownloading ? 'hidden' : 'flex'} flex-col justify-center items-center bg-white/10 rounded-xl p-8 backdrop-blur-sm border border-white/20 text-center print:hidden`}>
                 <h3 className="text-xl font-bold mb-2">Vuoi approfondire l'analisi?</h3>
                 <p className="text-indigo-200 mb-6 text-sm">
                     I nostri esperti possono aiutarti a implementare queste raccomandazioni e colmare i gap identificati.

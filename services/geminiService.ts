@@ -52,7 +52,7 @@ const responseSchema: Schema = {
 };
 
 export const generateAssessment = async (answers: Record<number, Answer>): Promise<AssessmentResult> => {
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Format answers for the prompt
   const answersText = Object.values(answers)
